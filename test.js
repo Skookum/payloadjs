@@ -6,7 +6,7 @@
   socket.connect(3333);
 
   socket.on('connect', function() {
-    var options = { location: 'http://www.chuckpreslar.com', asset_types: ['img', 'link', 'script'], iterations: 2 };
+    var options = { method: 'flood', location: 'http://www.chuckpreslar.com', asset_types: ['img', 'link', 'script'], iterations: 2 };
     socket.write(JSON.stringify(options));
   });
 
