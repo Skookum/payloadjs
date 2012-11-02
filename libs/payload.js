@@ -68,11 +68,39 @@
 
     Payload.fn = Payload.prototype = {};
 
+    /**
+     * Ramps up request flooding
+     *
+     * @param {String} location The URL of the target location
+     * @param {Array|String} asset_types Type of assets to request for
+     * @param {Number} iterations Number of times to flood location
+     * @param {Function} callback Callback to use after all requests have responded
+     *    or an error has occured
+     */
+    Payload.fn.ramp = function(location, asset_types, iterations, callback) {
+      var results = []
+        , count = 0
+        , self = this;
 
-    Payload.fn.ramp = function(target, iterations, callback) {
-
+      var ramp = function(err, result) {
+        if(!err && !result) return self.flood(location, asset_types, count + 1, ramp);
+        if(err) return callback(err, null)
+        results.push({ ramp: count + 1, results: result });
+        if(++count === iterations) return callback(null, results);
+        else return self.flood(location, asset_types, count + 1, ramp);
+      }
+      ramp();
     }
 
+    /**
+     * Floods the location with a series of requests
+     *
+     * @param {String} location The URL of the target location
+     * @param {Array|String} asset_types Type of assets to request for
+     * @param {Number} iterations Number of times to flood location
+     * @param {Function} callback Callback to use after all requests have responded
+     *    or an error has occured
+     */
     Payload.fn.flood = function(location, asset_types, iterations, callback) {
       var results = []
         , count = 0
@@ -80,15 +108,14 @@
 
       var flood = function(err, result) {
         if(err) return callback(err, null)
+        result.iteration = ++count;
         results.push(result);
-        if(++count === iterations)
-          return callback(null, results)
-        console.log(count, iterations);
+        if(count === iterations) return callback(null, results)
       };
 
       for(var i = 0; i < iterations; i++) {
         this.arm(location, asset_types, function(err, target) {
-          self.unload(target, flood)
+          self.unload(target, flood);
         })
       }
     }

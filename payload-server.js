@@ -10,7 +10,7 @@
       var payload = new Payload()
         , data = JSON.parse(data);
       console.log('Data received - ', data);
-      payload.flood(data.location, data.asset_types, data.iterations || 1, function(err, results) {
+      payload.ramp(data.location, data.asset_types, data.iterations || 1, function(err, results) {
         console.log('Sending results');
         connection.write(JSON.stringify(results));
       });
