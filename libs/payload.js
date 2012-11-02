@@ -186,7 +186,7 @@
           target.location
         , ['http://code.jquery.com/jquery.js']
         , function(err, window) {
-            if(err) return(err, null)
+            if(err) return callback(err, null)
             target.timing.end = Date.now();
             var $ = window.$
             for(var i = 0, il = asset_types.length; i < il; i++) {
