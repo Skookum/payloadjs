@@ -6,12 +6,12 @@
   socket.connect(3333);
 
   socket.on('connect', function() {
-    var options = { method: 'flood', location: 'http://www.chuckpreslar.com', asset_types: ['images', 'css', 'scripts'], iterations: 1 };
+    var options = { method: 'flood', location: 'http://www.chuckpreslar.com', asset_types: ['images', 'css', 'scripts'], iterations: 4 };
     socket.write(JSON.stringify(options));
   });
 
   socket.on('data', function(data) {
-    console.log(JSON.parse(data)[0].assets.images);
+    console.log(JSON.parse(data));
   });
 
 }())

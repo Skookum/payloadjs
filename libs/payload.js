@@ -22,9 +22,10 @@
             selector: 'img'
           , attr: 'src'
         }
-      , 'video': {}
-      , 'audio': {}
+      , 'videos': {}
+      , 'audios': {}
       , 'fonts': {}
+      , 'icons': {}
     };
 
     /**
