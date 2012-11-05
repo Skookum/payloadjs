@@ -42,13 +42,15 @@
 
       // Dispose of domain on connection close
       connection.on('close', function() { 
-        connectionDomain.detonate();
+        connection.detonate();
       });
 
+      /*
       connection.setTimeout(1000 * 60 * 2.5, function() { // The train leaves the station in 2.5 minutes
         console.log('Connection idle timeout expired');
         connection.detonate();
       });
+      */
 
     }).listen(3333, function() { console.log('Payload server listening on port 3333') });
 
