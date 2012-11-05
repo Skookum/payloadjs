@@ -23,10 +23,17 @@
         try {
           var payload = new Payload()
             , data = JSON.parse(data);
+
+          connection.testId = data.testId, connection.batchNumber = data.batchNumber;
+          
           console.log('Data received:\n', data);
           if(typeof payload[data.method] !== 'undfined') {
             payload[data.method](data.location, data.asset_types, data.iterations || 1, function(err, results) {
               console.log('Sending results');
+              if(results instanceof Array)
+                results = { batchNumber: connection.batchNumber, testId: connection.testId, results: results };
+              else
+                results.batchNumber = connection.batchNumber, results.testId = connection.testId;
               connection.write(JSON.stringify(err || results));
             });
           } else {
