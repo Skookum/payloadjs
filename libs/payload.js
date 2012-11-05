@@ -9,6 +9,24 @@
     
     function Payload() {}
 
+    Payload.types = {
+        'css': {
+            selector: 'link[type="text/css"], link[rel="stylesheet"]'
+          , attr: 'href'
+        }
+      , 'scripts': {
+            selector: 'script'
+          , attr: 'src'
+        }
+      , 'images': {
+            selector: 'img'
+          , attr: 'src'
+        }
+      , 'video': {}
+      , 'audio': {}
+      , 'fonts': {}
+    };
+
     /**
      * Constructor for target location to test
      *
@@ -84,11 +102,12 @@
 
       var ramp = function(err, result) {
         if(!err && !result) return self.flood(location, asset_types, count + 1, ramp);
-        if(err) return callback(err, null)
+        if(err) return callback(err, null);
         results.push({ ramp: count + 1, results: result });
         if(++count === iterations) return callback(null, results);
         else return self.flood(location, asset_types, count + 1, ramp);
       }
+
       ramp();
     }
 
@@ -110,7 +129,7 @@
         if(err) return callback(err, null)
         result.iteration = ++count;
         results.push(result);
-        if(count === iterations) return callback(null, results)
+        if(count === iterations) return callback(null, results);
       };
 
       for(var i = 0; i < iterations; i++) {
@@ -131,7 +150,8 @@
     Payload.fn.arm = function(location, asset_types, callback) {
       var target = location instanceof Payload.target ? location : 
           new Payload.target(location.match('http') ? location : 'http://' + location)
-        , self = this;
+        , self = this
+        , checked = [];
           asset_types = asset_types instanceof Array ? asset_types : asset_types.split(',');
           target.timing.start = Date.now();
 
@@ -145,14 +165,13 @@
        * @param {jQuery} $ jQuery selector to pick off DOM node attributes
        */
       function processAsset(type, list, $) {
-        var checked = []; // For memoization
         function check(p) {
           return p.match('http|www') ? p : location + p;
         }
         switch(type) {
-          case 'link':
+          case 'css':
             for(var i = 0, il = list.length; i < il; i++) {
-              var p = check($(list[i]).attr('href'));
+              var p = check($(list[i]).attr(Payload.types[type].attr));
               if(checked.indexOf(p) === -1) {
                 target.assets[type]
                   .push(new Payload.asset(type, p));
@@ -160,10 +179,10 @@
               }
             }
             break;
-          case 'img':
-          case 'script':
+          case 'images':
+          case 'scripts':
             for(var i = 0, il = list.length; i < il; i++) {
-              var p = check($(list[i]).attr('src'));
+              var p = check($(list[i]).attr(Payload.types[type].attr));
               if(checked.indexOf(p) === -1) {
                 target.assets[type]
                   .push(new Payload.asset(type, p));
@@ -191,7 +210,7 @@
             var $ = window.$
             for(var i = 0, il = asset_types.length; i < il; i++) {
               target.assets[asset_types[i]] = [];
-              processAsset(asset_types[i], $(asset_types[i]), $);
+              processAsset(asset_types[i], $(Payload.types[asset_types[i]].selector), $);
             }
             return callback(null, target);
           }
@@ -223,7 +242,7 @@
               }
             , function() {
                 next();
-              })
+              });
         },
         function(err) {
           callback(err, target);
