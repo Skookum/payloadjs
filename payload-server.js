@@ -13,6 +13,11 @@
 
       var connectionDomain = domain.create();
           connectionDomain.add(connection);
+      
+      connection.detonate = function() {
+        connection.destroy();
+        connectionDomain.dispose();
+      }
 
       connection.on('data', function(data) {
         try {
@@ -26,16 +31,24 @@
             });
           } else {
             connection.write(JSON.stringify({ err: new Error('Invalid operation') }));
+            connection.detonate();
           }
-        } catch(e) {
+        } catch(err) {
           // Handle errors caused by handling connection
-          connection.destroy();
-          connectionDomain.dispose();
+          console.log('There was an error processing the data:\n', err);
+          connection.detonate();
         }
       });
 
       // Dispose of domain on connection close
-      connection.on('close', function() { connectionDomain.dispose() });
+      connection.on('close', function() { 
+        connectionDomain.detonate();
+      });
+
+      connection.setTimeout(1000 * 60 * 2.5, function() { // The train leaves the station in 2.5 minutes
+        console.log('Connection idle timeout expired');
+        connection.detonate();
+      });
 
     }).listen(3333, function() { console.log('Payload server listening on port 3333') });
 
