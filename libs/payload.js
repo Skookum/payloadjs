@@ -40,6 +40,7 @@
           start: 0
         , end: 0
       };
+      this.size = 0;
       this.assets = {};
     }
 
@@ -74,6 +75,7 @@
           start: 0
         , end: 0
       }
+      this.size = 0;
     }
 
     /**
@@ -210,7 +212,8 @@
             var $ = window.$
             for(var i = 0, il = asset_types.length; i < il; i++) {
               target.assets[asset_types[i]] = [];
-              processAsset(asset_types[i], $(Payload.types[asset_types[i]].selector), $);
+              if(typeof Payload.types[asset_types[i]] !== 'undefined') // Ensure we're prepared to work with type
+                processAsset(asset_types[i], $(Payload.types[asset_types[i]].selector), $);
             }
             return callback(null, target);
           }
@@ -235,9 +238,10 @@
                 grabbing.timing.start = Date.now();
                 request.get(grabbing.location)
                   .end(function(res) {
+                    grabbing.size = parseInt(res.headers['content-length']);
                     grabbing.timing.end = Date.now();
                     n(res.status >= 400 ? new Error('Recieved ' + res.status + 
-                                                      ' for ' + grabbing.location): null);
+                                                      ' for ' + grabbing.location) : null);
                   });
               }
             , function() {
