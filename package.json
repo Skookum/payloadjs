@@ -8,6 +8,8 @@
   "dependencies" : {
     "jsdom": "*",
     "async": "*",
-    "superagent": "*"
+    "superagent": "*",
+    "domain": "*",
+    "underscore": "*"
   }
 }

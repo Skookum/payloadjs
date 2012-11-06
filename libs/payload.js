@@ -3,6 +3,7 @@
   var path = require('path')
     , jsdom = require('jsdom')
     , async = require('async')
+    , _ = require('underscore')
     , request = require('superagent');
 
   var Payload = (function() {
@@ -43,7 +44,7 @@
       };
       this.size = 0;
       this.assets = {};
-    }
+    };
 
     /**
      * Time taken to load the target page's HTML markup
@@ -52,14 +53,14 @@
      */
     Payload.target.prototype.time = function() {
       return this.timing.end - this.timing.start;
-    }
+    };
 
     /**
      * Calculates total load time for target
      *
-     * @returns {Number} The total load time for all assets
+     * @return {Number} The total load time for all assets
      */
-    Payload.target.prototype.load = function() {}
+    Payload.target.prototype.load = function() {};
 
     /**
      * Constructor for a retrievable asset
@@ -75,9 +76,9 @@
       this.timing = {
           start: 0
         , end: 0
-      }
+      };
       this.size = 0;
-    }
+    };
 
     /**
      * Time taken to load the retrievable asset
@@ -85,7 +86,7 @@
      */
     Payload.asset.prototype.time = function() {
       return this.timing.end - this.timing.start;
-    }
+    };
 
     Payload.fn = Payload.prototype = {};
 
@@ -109,10 +110,10 @@
         results.push({ ramp: count + 1, results: result });
         if(++count === iterations) return callback(null, results);
         else return self.flood(location, asset_types, count + 1, ramp);
-      }
+      };
 
       ramp();
-    }
+    };
 
     /**
      * Floods the location with a series of requests
@@ -124,23 +125,21 @@
      *    or an error has occured
      */
     Payload.fn.flood = function(location, asset_types, iterations, callback) {
-      var results = []
-        , count = 0
-        , self = this;
+      var results = [], self = this;
 
-      var flood = function(err, result) {
-        if(err) return callback(err, null)
-        result.iteration = ++count;
-        results.push(result);
-        if(count === iterations) return callback(null, results);
-      };
+      async.forEach(_.range(iterations), function(i, done) {
 
-      for(var i = 0; i < iterations; i++) {
-        this.arm(location, asset_types, function(err, target) {
-          self.unload(target, flood);
-        })
-      }
-    }
+        self.arm(location, asset_types, function(err, target) {
+          self.unload(target, function(err, result) {
+            results.push(result);
+            done(err);
+          });
+        });
+
+      }, function(err) {
+        return callback(err, results);
+      });
+    };
 
     /**
      * `Arms` a target with location details of all
@@ -171,10 +170,11 @@
         function check(p) {
           return p.match('http|www') ? p : location + p;
         }
+        var p, i = 0, il = list.length;
         switch(type) {
           case 'css':
-            for(var i = 0, il = list.length; i < il; i++) {
-              var p = check($(list[i]).attr(Payload.types[type].attr));
+            for(i = 0; i < il; i++) {
+              p = check($(list[i]).attr(Payload.types[type].attr));
               if(checked.indexOf(p) === -1) {
                 target.assets[type]
                   .push(new Payload.asset(type, p));
@@ -184,8 +184,8 @@
             break;
           case 'images':
           case 'scripts':
-            for(var i = 0, il = list.length; i < il; i++) {
-              var p = check($(list[i]).attr(Payload.types[type].attr));
+            for(i = 0; i < il; i++) {
+              p = check($(list[i]).attr(Payload.types[type].attr));
               if(checked.indexOf(p) === -1) {
                 target.assets[type]
                   .push(new Payload.asset(type, p));
@@ -208,9 +208,9 @@
           target.location
         , ['http://code.jquery.com/jquery.js']
         , function(err, window) {
-            if(err) return callback(err, null)
+            if(err) return callback(err, null);
             target.timing.end = Date.now();
-            var $ = window.$
+            var $ = window.$;
             for(var i = 0, il = asset_types.length; i < il; i++) {
               target.assets[asset_types[i]] = [];
               if(typeof Payload.types[asset_types[i]] !== 'undefined') // Ensure we're prepared to work with type
@@ -220,7 +220,7 @@
           }
         );
 
-    }
+    };
 
     /**
      * Unloads requests onto the `target's` list of assets
@@ -239,7 +239,7 @@
                 grabbing.timing.start = Date.now();
                 request.get(grabbing.location)
                   .end(function(res) {
-                    grabbing.size = parseInt(res.headers['content-length']);
+                    grabbing.size = parseInt(res.headers['content-length'], 10);
                     grabbing.timing.end = Date.now();
                     n(res.status >= 400 ? new Error('Recieved ' + res.status + 
                                                       ' for ' + grabbing.location) : null);
@@ -252,7 +252,7 @@
         function(err) {
           callback(err, target);
         });
-    }
+    };
 
     return Payload;
   
@@ -267,4 +267,4 @@
   else
     global.Payload = Payload;
 
-}(typeof window !== 'undefined' ? window : module))
+}(typeof window !== 'undefined' ? window : module));
