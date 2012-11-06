@@ -153,13 +153,15 @@
 
         self.arm(location, asset_types, function(err, target) {
           self.unload(target, function(err, result) {
-            results.push(result);  
+            // results.push(result);
+            result.iteration = i + 1;
+            callback(err, result);
             done(err);
           });
         });
 
       }, function(err) {
-        return callback(err, results);
+        return false;
       });
     }
 
