@@ -187,11 +187,11 @@
         return 'misc';
       }
 
-      var phantom = child.spawn('phantomjs', [__dirname + '/init.js', location])
+      var phantom = child.spawn('phantomjs', [__dirname + '/init.js', location.match('http://') ? location : 'http://' + location])
         , response_buffer = '';
 
       phantom.stdout.on('data', function(data) {
-        response_buffer += data.toString(); // Add to response_buffer string to prevent 
+        response_buffer += data.toString(); // Add to response_buffer string to prevent
                                             // weird on('data') calls for larger iterations
       });
 
