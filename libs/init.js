@@ -7,7 +7,7 @@
     console.log(JSON.stringify({ 
         location: request.url
       , mime: request.contentType
-    }));
+    }) + '*');
 
   }
 

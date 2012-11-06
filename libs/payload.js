@@ -153,15 +153,13 @@
 
         self.arm(location, asset_types, function(err, target) {
           self.unload(target, function(err, result) {
-            // results.push(result);
-            result.iteration = i+1;
-            callback(err, result);
+            results.push(result);  
             done(err);
           });
         });
 
       }, function(err) {
-        return false;
+        return callback(err, results);
       });
     }
 
@@ -187,23 +185,12 @@
         return 'misc';
       }
 
-      var phantom = child.spawn('phantomjs', [__dirname + '/init.js', location]);
+      var phantom = child.spawn('phantomjs', [__dirname + '/init.js', location])
+        , response_buffer = '';
 
       phantom.stdout.on('data', function(data) {
-        try {
-          data = JSON.parse(data.toString());
-          var type = parseMime(data.mime);
-          if(~asset_types.indexOf(type)) {
-            if(!(target.assets[type] instanceof Array))
-              target.assets[type] = [];
-            if(!~checked.indexOf(data.location)) {
-              target.assets[type].push(new Payload.asset(type, data.mime, data.location));
-              checked.push(data.location);
-            }
-          }
-        } catch(e) {
-          console.log(e);
-        }
+        response_buffer += data.toString(); // Add to response_buffer string to prevent 
+                                            // weird on('data') calls for larger iterations
       });
 
       phantom.stderr.on('data', function(data) {
@@ -215,13 +202,26 @@
         if(code)
           return callback(new Error('PhantomJS exited with status code ' + code), null);
         else {
+          var data_array = response_buffer.split('*')
+          for(var i = 0, il = data_array.length - 1; i < il; i++) {
+            var data = JSON.parse(data_array[i].replace(/(\r\n|\n|\r)/gm,''))
+              , type = parseMime(data.mime);
+            if(~asset_types.indexOf(type)) {
+              if(!(target.assets[type] instanceof Array))
+                target.assets[type] = [];
+              if(!~checked.indexOf(data.location)) {
+                target.assets[type].push(new Payload.asset(type, data.mime, data.location));
+                checked.push(data.location);
+              }
+            }
+          }
           target.timing.start = Date.now();
           request.get(target.location)
                   .end(function(res) {
                     target.timing.end = Date.now();
                     target.size = parseInt(res.headers['content-length']);
                     return callback(null, target);
-                  })
+                  });
         }
       });
 

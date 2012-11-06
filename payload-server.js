@@ -27,7 +27,6 @@
           console.log('Data received:\n', data);
           if(typeof payload[data.method] !== 'undfined') {
             payload[data.method](data.location, data.asset_types, data.iterations || 1, function(err, results) {
-              console.log('Sending results', err);
               if(err) connection.write(err.toString());
               else connection.write(JSON.stringify(results));
               // connection.write(err ? err.toString() : JSON.stringify(results));
