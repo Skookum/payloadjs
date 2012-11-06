@@ -7,7 +7,7 @@
     , request = require('superagent');
 
   var Payload = (function() {
-    
+
     function Payload() {}
 
     Payload.types = {
@@ -49,7 +49,7 @@
     /**
      * Time taken to load the target page's HTML markup
      *
-     * @return {Number} Load time for page markup 
+     * @return {Number} Load time for page markup
      */
     Payload.target.prototype.time = function() {
       return this.timing.end - this.timing.start;
@@ -82,7 +82,7 @@
 
     /**
      * Time taken to load the retrievable asset
-     * @return {Number} Load time for asset 
+     * @return {Number} Load time for asset
      */
     Payload.asset.prototype.time = function() {
       return this.timing.end - this.timing.start;
@@ -131,13 +131,15 @@
 
         self.arm(location, asset_types, function(err, target) {
           self.unload(target, function(err, result) {
-            results.push(result);
+            // results.push(result);
+            result.iteration = i+1;
+            callback(err, result);
             done(err);
           });
         });
 
       }, function(err) {
-        return callback(err, results);
+        return false;
       });
     };
 
@@ -150,7 +152,7 @@
      * @param {Function} callback Function to call once payload has been `armed`
      */
     Payload.fn.arm = function(location, asset_types, callback) {
-      var target = location instanceof Payload.target ? location : 
+      var target = location instanceof Payload.target ? location :
           new Payload.target(location.match('http') ? location : 'http://' + location)
         , self = this
         , checked = [];
@@ -241,7 +243,7 @@
                   .end(function(res) {
                     grabbing.size = parseInt(res.headers['content-length'], 10);
                     grabbing.timing.end = Date.now();
-                    n(res.status >= 400 ? new Error('Recieved ' + res.status + 
+                    n(res.status >= 400 ? new Error('Recieved ' + res.status +
                                                       ' for ' + grabbing.location) : null);
                   });
               }
@@ -255,7 +257,7 @@
     };
 
     return Payload;
-  
+
   }());
 
   if(typeof global !== 'undefined' && global.exports)
