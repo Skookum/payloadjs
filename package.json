@@ -6,7 +6,6 @@
     "start" : "node payload"
   },
   "dependencies" : {
-    "jsdom": "*",
     "async": "*",
     "superagent": "*",
     "domain": "*",

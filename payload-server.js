@@ -28,7 +28,7 @@
           if(typeof payload[data.method] !== 'undfined') {
             payload[data.method](data.location, data.asset_types, data.iterations || 1, function(err, results) {
               console.log('Sending results');
-              connection.write(JSON.stringify(err || results));
+              connection.write(err !== null ? err.toString() : JSON.stringify(results));
             });
           } else {
             connection.write(JSON.stringify({ err: new Error('Invalid operation') }));
@@ -43,6 +43,11 @@
 
       // Dispose of domain on connection close
       connection.on('close', function() { 
+        connection.detonate();
+      });
+
+      connectionDomain.on('error', function(err) {
+        console.log('An error occured handling the connection\n', err.toString());
         connection.detonate();
       });
 
