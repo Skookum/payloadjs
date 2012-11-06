@@ -27,8 +27,11 @@
           console.log('Data received:\n', data);
           if(typeof payload[data.method] !== 'undfined') {
             payload[data.method](data.location, data.asset_types, data.iterations || 1, function(err, results) {
+              console.log('Sending results');
               if(err) connection.write(err.toString());
-              else connection.write(JSON.stringify(results));
+              else connection.write(JSON.stringify(results), function() {
+                connection.end();
+              });
               // connection.write(err ? err.toString() : JSON.stringify(results));
             });
           } else {
@@ -44,7 +47,7 @@
 
       // Dispose of domain on connection close
       connection.on('close', function() {
-        connection.detonate();
+        console.log('Socket closed.');
       });
 
       connectionDomain.on('error', function(err) {

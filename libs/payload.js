@@ -153,15 +153,13 @@
 
         self.arm(location, asset_types, function(err, target) {
           self.unload(target, function(err, result) {
-            // results.push(result);
-            result.iteration = i + 1;
-            callback(err, result);
+            results.push(result);  
             done(err);
           });
         });
 
       }, function(err) {
-        return false;
+        return callback(err, results);
       });
     }
 
@@ -191,7 +189,7 @@
         , response_buffer = '';
 
       phantom.stdout.on('data', function(data) {
-        response_buffer += data.toString(); // Add to response_buffer string to prevent
+        response_buffer += data.toString(); // Add to response_buffer string to prevent 
                                             // weird on('data') calls for larger iterations
       });
 
