@@ -1,32 +1,59 @@
 ;(function(global) {
 
   var path = require('path')
-    , jsdom = require('jsdom')
+    , child = require('child_process')
     , async = require('async')
-    , _ = require('underscore')
-    , request = require('superagent');
+    , request = require('superagent')
+    , _ = require('underscore');
 
   var Payload = (function() {
 
     function Payload() {}
 
     Payload.types = {
-        'css': {
-            selector: 'link[type="text/css"], link[rel="stylesheet"]'
-          , attr: 'href'
-        }
-      , 'scripts': {
-            selector: 'script'
-          , attr: 'src'
-        }
-      , 'images': {
-            selector: 'img'
-          , attr: 'src'
-        }
-      , 'videos': {}
-      , 'audios': {}
-      , 'fonts': {}
-      , 'icons': {}
+        'html': [
+            'text/html'
+        ]
+      , 'css': [
+            'text/css'
+        ]
+      , 'scripts': [
+            'text/javascript'
+          , 'application/javascript'
+        ]
+      , 'images': [
+            'image/gif'
+          , 'image/jpeg'
+          , 'image/pjpeg'
+          , 'image/png'
+          , 'image/svg+xml'
+          , 'image/tiff'
+          , 'image/vnd.microsoft.icon'
+        ]
+      , 'videos': [
+            'video/mpeg4'
+          , 'video/mp4'
+          , 'video/ogg'
+          , 'video/quicktime'
+          , 'video/webm'
+          , 'video/x-matroska'
+          , 'video/x-ms-wmv'
+          , 'video/x-flv'
+        ]
+      , 'audios': [
+            'audio/basic'
+          , 'audio/L24'
+          , 'audio/mp4'
+          , 'audio/mpeg'
+          , 'audio/ogg'
+          , 'audio/vorbis'
+          , 'audio/vnd.rn-realaudio'
+          , 'audio/vnd.wave'
+          , 'audio/webm'
+        ]
+      , 'application': []
+      , 'fonts': []
+      , 'icons': []
     };
 
     /**
@@ -44,23 +71,24 @@
       };
       this.size = 0;
       this.assets = {};
-    };
+    }
 
-    /**
-     * Time taken to load the target page's HTML markup
-     *
-     * @return {Number} Load time for page markup
-     */
-    Payload.target.prototype.time = function() {
-      return this.timing.end - this.timing.start;
-    };
+    Payload.target.prototype.clone = function() {
 
-    /**
-     * Calculates total load time for target
-     *
-     * @return {Number} The total load time for all assets
-     */
-    Payload.target.prototype.load = function() {};
+      function clone(target, original) {
+        if(original instanceof Array)
+          return original;
+        if(toString.call(original) !== '[object Object]' || Object.keys(original).length === 0)
+          return original;
+        else {
+          for(var property in original)
+            target[property] = clone(target[property], original[property]);
+          return target;
+        }
+      }
+
+      return clone(new Payload.target(this.location), this)
+    }
 
     /**
      * Constructor for a retrievable asset
@@ -70,23 +98,16 @@
      * @param {String} type DOM Type associated with the asset
      * @param {String} location Location of the retrievable asset
      */
-    Payload.asset = function(type, location) {
+    Payload.asset = function(type, mime, location) {
       this.type = type;
+      this.mime = mime;
       this.location = location;
       this.timing = {
           start: 0
         , end: 0
-      };
+      }
       this.size = 0;
-    };
-
-    /**
-     * Time taken to load the retrievable asset
-     * @return {Number} Load time for asset
-     */
-    Payload.asset.prototype.time = function() {
-      return this.timing.end - this.timing.start;
-    };
+    }
 
     Payload.fn = Payload.prototype = {};
 
@@ -110,10 +131,11 @@
         results.push({ ramp: count + 1, results: result });
         if(++count === iterations) return callback(null, results);
         else return self.flood(location, asset_types, count + 1, ramp);
-      };
+      }
 
       ramp();
-    };
+
+    }
 
     /**
      * Floods the location with a series of requests
@@ -141,7 +163,7 @@
       }, function(err) {
         return false;
       });
-    };
+    }
 
     /**
      * `Arms` a target with location details of all
@@ -156,73 +178,54 @@
           new Payload.target(location.match('http') ? location : 'http://' + location)
         , self = this
         , checked = [];
-          asset_types = asset_types instanceof Array ? asset_types : asset_types.split(',');
-          target.timing.start = Date.now();
 
-      /**
-       * Processes a `list` of assets of a certain `type` and
-       * adds them to the target
-       *
-       * @param {String} type The type of asset for request
-       * @param {Array} list List of DOM nodes found on the target
-       *    for the given type
-       * @param {jQuery} $ jQuery selector to pick off DOM node attributes
-       */
-      function processAsset(type, list, $) {
-        function check(p) {
-          return p.match('http|www') ? p : location + p;
-        }
-        var p, i = 0, il = list.length;
-        switch(type) {
-          case 'css':
-            for(i = 0; i < il; i++) {
-              p = check($(list[i]).attr(Payload.types[type].attr));
-              if(checked.indexOf(p) === -1) {
-                target.assets[type]
-                  .push(new Payload.asset(type, p));
-                checked.push(p);
-              }
-            }
-            break;
-          case 'images':
-          case 'scripts':
-            for(i = 0; i < il; i++) {
-              p = check($(list[i]).attr(Payload.types[type].attr));
-              if(checked.indexOf(p) === -1) {
-                target.assets[type]
-                  .push(new Payload.asset(type, p));
-                checked.push(p);
-              }
-            }
-            break;
-          case 'frame':
-            break;
-          case 'iframe':
-            break;
-          case 'font':
-            break;
-          default:
-            break;
-        }
+      asset_types = asset_types instanceof Array ? asset_types : asset_types.split(',');
+
+      var parseMime = function(mime_type) {
+        for(var type in Payload.types)
+          if(~Payload.types[type].indexOf(mime_type)) return type;
+        return 'misc';
       }
 
-      jsdom.env(
-          target.location
-        , ['http://code.jquery.com/jquery.js']
-        , function(err, window) {
-            if(err) return callback(err, null);
-            target.timing.end = Date.now();
-            var $ = window.$;
-            for(var i = 0, il = asset_types.length; i < il; i++) {
-              target.assets[asset_types[i]] = [];
-              if(typeof Payload.types[asset_types[i]] !== 'undefined') // Ensure we're prepared to work with type
-                processAsset(asset_types[i], $(Payload.types[asset_types[i]].selector), $);
-            }
-            return callback(null, target);
-          }
-        );
+      var phantom = child.spawn('phantomjs', [__dirname + '/init.js', location]);
 
-    };
+      phantom.stdout.on('data', function(data) {
+        try {
+          data = JSON.parse(data.toString());
+          var type = parseMime(data.mime);
+          if(~asset_types.indexOf(type)) {
+            if(!(target.assets[type] instanceof Array))
+              target.assets[type] = [];
+            if(!~checked.indexOf(data.location)) {
+              target.assets[type].push(new Payload.asset(type, data.mime, data.location));
+              checked.push(data.location);
+            }
+          }
+        } catch(e) {
+          console.log(e);
+        }
+      });
+
+      phantom.stderr.on('data', function(data) {
+        console.log(data.toString());
+        return callback(new Error(data.toString()), null);
+      });
+
+      phantom.on('exit', function(code) {
+        if(code)
+          return callback(new Error('PhantomJS exited with status code ' + code), null);
+        else {
+          target.timing.start = Date.now();
+          request.get(target.location)
+                  .end(function(res) {
+                    target.timing.end = Date.now();
+                    target.size = parseInt(res.headers['content-length']);
+                    return callback(null, target);
+                  })
+        }
+      });
+
+    }
 
     /**
      * Unloads requests onto the `target's` list of assets
@@ -231,7 +234,7 @@
      * @param {Function} callback Function to call after iteration has completed
      */
     Payload.fn.unload = function(target, callback) {
-      var count = 0;
+      target = target.clone();
       async.forEach(Object.keys(target.assets),
         function(assetType, next) {
           var asset = target.assets[assetType];
@@ -241,7 +244,7 @@
                 grabbing.timing.start = Date.now();
                 request.get(grabbing.location)
                   .end(function(res) {
-                    grabbing.size = parseInt(res.headers['content-length'], 10);
+                    grabbing.size = parseInt(res.headers['content-length']);
                     grabbing.timing.end = Date.now();
                     n(res.status >= 400 ? new Error('Recieved ' + res.status +
                                                       ' for ' + grabbing.location) : null);
@@ -254,7 +257,7 @@
         function(err) {
           callback(err, target);
         });
-    };
+    }
 
     return Payload;
 
@@ -269,4 +272,4 @@
   else
     global.Payload = Payload;
 
-}(typeof window !== 'undefined' ? window : module));
+}(typeof window !== 'undefined' ? window : module))
