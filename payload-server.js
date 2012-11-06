@@ -13,7 +13,7 @@
 
       var connectionDomain = domain.create();
           connectionDomain.add(connection);
-      
+
       connection.detonate = function() {
         connection.destroy();
         // connectionDomain.dispose(); <-- Not doing what I think it's doing
@@ -27,8 +27,10 @@
           console.log('Data received:\n', data);
           if(typeof payload[data.method] !== 'undfined') {
             payload[data.method](data.location, data.asset_types, data.iterations || 1, function(err, results) {
-              console.log('Sending results');
-              connection.write(err !== null ? err.toString() : JSON.stringify(results));
+              console.log('Sending results', err);
+              if(err) connection.write(err.toString());
+              else connection.write(JSON.stringify(results));
+              // connection.write(err ? err.toString() : JSON.stringify(results));
             });
           } else {
             connection.write(JSON.stringify({ err: new Error('Invalid operation') }));
@@ -42,7 +44,7 @@
       });
 
       // Dispose of domain on connection close
-      connection.on('close', function() { 
+      connection.on('close', function() {
         connection.detonate();
       });
 
